@@ -25,9 +25,20 @@ jobs:
           python -m venv venv
           
           # 仮想環境内のpipを使って依存関係をインストール
-          ./venv/bin/pip install google-genai pydantic -U
+          # インストール先を確認するために、--verboseオプションを付ける (念のため)
+          ./venv/bin/pip install google-genai pydantic -U --verbose
           
-          # 仮想環境内のpythonを使ってスクリプトを実行
+          # -----------------------------------------------------------
+          # 🚨 最終的な修正: PYTHONPATHにsite-packagesのパスを追加 🚨
+          # -----------------------------------------------------------
+          
+          # 仮想環境内の site-packages ディレクトリのパスを取得
+          PYTHONPATH_VENV="./venv/lib/python3.11/site-packages"
+          
+          # 環境変数 $PYTHONPATH にインストール先を追加 (export -P は GitHub Actionsの bashでは使えないため、echoで$GITHUB_ENVに書き出す)
+          echo "PYTHONPATH=$PYTHONPATH_VENV" >> $GITHUB_ENV
+          
+          # スクリプトを実行 (この時点では環境変数が適用されているはず)
           ./venv/bin/python generate_article.py
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
