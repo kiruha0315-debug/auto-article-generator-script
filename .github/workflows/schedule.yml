@@ -33,7 +33,6 @@ jobs:
           ./venv/bin/python generate_article.py
           
           # 生成されたHTMLファイル名を特定 (YYYYMMDD-slug.html)
-          # 注意: generate_article.pyが生成するファイル名を正確に特定できることが重要
           GENERATED_FILE=$(ls *.html | head -n 1) 
           
           # デプロイ用に 'articles' フォルダを作成し、HTMLを移動
@@ -41,9 +40,9 @@ jobs:
           mv "$GENERATED_FILE" ${{ env.ARTICLE_DIR }}/
           
           # index.htmlが存在しないとエラーになるため、空のindex.htmlを作成 (または既存のものをコピー)
-          # リポジトリのルートにindex.htmlがないとPagesが混乱する可能性
           touch index.html
         env:
+          # 🚨 修正箇所: GEMINI_API_KEYをこのrunブロックに設定 🚨
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
       - name: 5. デプロイ用Artifactのアップロード
