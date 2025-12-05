@@ -17,20 +17,23 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          # cache: 'pip' # 削除するかコメントアウトする
 
-      - name: 3. 依存関係のインストール (環境明示)
+      # 🚨 修正ステップ: 仮想環境の作成とインストール、実行を統合 🚨
+      - name: 3. 仮想環境作成、依存関係のインストール、スクリプト実行
         run: |
-          python -m pip install --upgrade pip  # pipを最新化
-          python -m pip install google-genai pydantic -U --user # ユーザーレベルで確実にインストール
-        
-      - name: 4. スクリプトの実行と記事の生成
-        id: generate
-        run: python generate_article.py
+          # 仮想環境を作成し、有効化
+          python -m venv venv
+          source venv/bin/activate
+          
+          # 依存関係をインストール
+          pip install google-genai pydantic -U
+          
+          # スクリプトを実行
+          python generate_article.py
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
-      - name: 5. 生成されたHTMLファイルの特定とデプロイ
+      - name: 4. 生成されたHTMLファイルの特定とデプロイ
         uses: cpina/github-action-push-to-another-repository@main
         env:
           API_TOKEN_GITHUB: ${{ secrets.DEPLOY_TOKEN }}
