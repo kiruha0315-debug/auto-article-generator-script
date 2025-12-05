@@ -57,10 +57,10 @@ jobs:
       - name: 5. GitHub Pages への直接コミットとデプロイ
         uses: peaceiris/actions-gh-pages@v3
         with:
-          # 🚨 修正2: GITHUB_TOKEN を使って main ブランチに articles フォルダをコミット 🚨
+          # 🚨 修正: secrets.GITHUB_TOKEN を明示的に渡す 🚨
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .  # リポジトリのルートにあるファイルをすべて公開
-          force_orphan: true # 履歴を上書きしてクリーンな状態を保つ
+          force_orphan: true
           
       - name: 6. GitHub Pagesへのデプロイ
         id: deployment
