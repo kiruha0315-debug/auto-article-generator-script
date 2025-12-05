@@ -1,32 +1,36 @@
 # ----------------------------------------------------------------------
-# 🚨 最終修正: PYTHONPATHの自動設定（インポート前に実行） 🚨
-# GitHub Actions環境でのModuleNotFoundErrorを回避するための絶対パス追加
+# 🚨 FINAL PATH FIX: GitHub Actions用 🚨
+# モジュールインポート前に強制的に仮想環境のsite-packagesをsys.pathに追加
 import sys
 import os
-import glob
 
-# 仮想環境内の site-packages ディレクトリのパスを自動で探す
-# Linux環境 (venv/lib/pythonX.Y/site-packages) を想定
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-venv_path = os.path.join(BASE_DIR, 'venv')
+# 実行環境のPythonのバージョンを取得 (例: 'python3.11')
+# sys.version_infoは、Actions環境で実行中のPythonのバージョンを正確に教えてくれる
+PYTHON_VERSION_DIR = f"python{sys.version_info.major}.{sys.version_info.minor}"
 
-# Pythonのバージョンディレクトリを見つける (例: lib/python3.11)
-lib_dir = glob.glob(os.path.join(venv_path, 'lib', 'python*'))
+# site-packagesの正確なパスを定義
+# (auto-article-generator-script/venv/lib/python3.11/site-packages)
+VENV_SITE_PACKAGES = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 
+    'venv', 
+    'lib', 
+    PYTHON_VERSION_DIR, 
+    'site-packages'
+)
 
-if lib_dir:
-    site_packages_path = os.path.join(lib_dir[0], 'site-packages')
-    if site_packages_path not in sys.path:
-        sys.path.append(site_packages_path)
-        print(f"✅ PYTHONPATHに {site_packages_path} を追加しました。")
-else:
-    print("❌ 仮想環境のlibディレクトリが見つかりませんでした。")
+# パスがsys.pathになければ追加
+if VENV_SITE_PACKAGES not in sys.path:
+    sys.path.append(VENV_SITE_PACKAGES)
+    # 仮想環境外で実行した場合の確認用
+    # print(f"✅ PYTHONPATHに {VENV_SITE_PACKAGES} を追加しました。") 
+
 # ----------------------------------------------------------------------
-
+# 以下、モジュールのインポート
 import json
 import re
 from datetime import datetime
-# これでインポートが成功するはず
-import google.generativeai as genai
+# 💡 これでパスが通り、インポートが成功するはず 💡
+import google.generativeai as genai 
 
 # --- 1. 定数と初期設定 ---
 
@@ -44,6 +48,7 @@ def configure_api():
     API_KEY = os.environ.get("GEMINI_API_KEY") 
     
     if not API_KEY:
+        # このメッセージがログに出たら、APIキーが Secrets に設定されていないか、環境変数名が間違っています
         print("エラー: GEMINI_API_KEYが環境変数に設定されていません。")
         return False
     
@@ -113,7 +118,6 @@ def create_and_save_html(article_data):
     meta_description = article_data["meta_description"]
     
     # Markdownを簡単なHTMLに変換 (簡易的な置換)
-    # 複数行のテキストを <p>でラップする
     body_html = body_markdown.replace('## ', '<h2>').replace('### ', '<h3>')
     body_html = body_html.replace('\n\n', '</p><p>')
     body_html = re.sub(r'<h2>(.*?)', r'</p><h2>\1', body_html)
@@ -125,10 +129,10 @@ def create_and_save_html(article_data):
     url_slug = re.sub(r'[^a-z0-9]+', '-', TARGET_KEYWORD.lower()).strip('-')[:30]
     filename = f"{today_str}-{url_slug}.html"
     
-    # AdSenseコードはダミーを使用 (本番コードはSecretsなどから読み込むのが理想)
+    # AdSenseコードはダミーを使用 
     ADSENSE_CODE = '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2130894810041111" crossorigin="anonymous"></script>'
     
-    # AdSense所有権確認タグ (デプロイ時に必要なくなるが、残していても良い)
+    # GSC確認タグ
     GSC_VERIFICATION = '<meta name="google-site-verification" content="gQHkk6TWzD6wsQHRbbQt5o8yszlMxyKs3LgeqAzOyg4" />'
 
     html_template = f"""
