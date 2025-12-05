@@ -1,40 +1,37 @@
-name: Scheduled Article Generation and Pages Deployment
+name: Scheduled Article Generation
 
 on:
-  schedule:
-    - cron: '0 1 * * *'
   workflow_dispatch:
+  schedule:
+    - cron: '0 1 * * *' # 毎日午前1時 (JST) に実行
 
 jobs:
   generate-and-deploy:
     runs-on: ubuntu-latest
-    
-    # 🚨 修正箇所1: 必要な権限の追加 🚨
-    permissions:
-      contents: write     # ファイルのコミットとプッシュのために必要
-      pages: write       
-      id-token: write    
-      
-    env:
-      ARTICLE_DIR: articles
-    
 
-    
+    # 必須の権限設定
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
     steps:
       - name: 1. リポジトリをチェックアウト
         uses: actions/checkout@v4
 
-      - name: 2. Python環境のセットアップ
+      - name: 2. Python 環境設定と依存関係インストール
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.x'
+          cache: 'pip'
+      
+      - run: python -m venv venv
+      - run: ./venv/bin/pip install -r requirements.txt
+      
+      - name: 3. Pages デプロイのセットアップ
+        uses: actions/configure-pages@v4
 
-      - name: 3. 仮想環境作成と依存関係のインストール
-        run: |
-          python -m venv venv
-          ./venv/bin/pip install google-generativeai pydantic -U
-
-      - name: 4. 記事生成と一時ディレクトリへの保存
+      - name: 4. 記事生成とArtifact用のファイル準備
         run: |
           # 記事生成スクリプトを実行
           export GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}"
@@ -48,22 +45,22 @@ jobs:
             exit 1
           fi
 
-          # 🚨 修正1: デプロイ先リポジトリにコミットするための準備 🚨
-          mkdir -p articles
-          mv "$GENERATED_FILE" articles/
+          # 🚨 修正: Artifactのルートとして使う 'temp_deploy' フォルダを作成 🚨
+          mkdir temp_deploy
           
-          # index.htmlと.nojekyllがルートにあることを確認 (以前追加済み)
-        
-      - name: 5. GitHub Pages への直接コミットとデプロイ
-        uses: peaceiris/actions-gh-pages@v3
+          # 記事フォルダを作成し、生成物を移動
+          mkdir -p temp_deploy/articles
+          mv "$GENERATED_FILE" temp_deploy/articles/
+          
+          # index.htmlと.nojekyllをArtifactのルートにコピー (以前追加済み)
+          cp index.html temp_deploy/index.html
+          cp .nojekyll temp_deploy/.nojekyll
+
+      - name: 5. デプロイ用Artifactのアップロード
+        uses: actions/upload-pages-artifact@v3
         with:
-          # 🚨 修正: secrets.GITHUB_TOKEN を明示的に渡す 🚨
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .  # リポジトリのルートにあるファイルをすべて公開
-          force_orphan: true
-          
+          path: temp_deploy # Artifact のルートは temp_deploy/
+
       - name: 6. GitHub Pagesへのデプロイ
         id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
