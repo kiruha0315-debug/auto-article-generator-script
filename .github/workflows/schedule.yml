@@ -9,9 +9,10 @@ jobs:
   generate-and-deploy:
     runs-on: ubuntu-latest
     
-    # 環境変数を設定 (ステップ間で共有するため)
+    # 🚨 修正箇所1: ジョブ全体に適用する環境変数をここで設定 🚨
     env:
-      ARTICLE_DIR: articles # 記事をまとめるディレクトリ名
+      ARTICLE_DIR: articles
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # これで全ステップに適用
     
     steps:
       - name: 1. リポジトリをチェックアウト
@@ -29,31 +30,25 @@ jobs:
 
       - name: 4. 記事生成と一時ディレクトリへの保存
         run: |
-          # 記事生成スクリプトを実行し、HTMLファイルを生成
+          # 🚨 修正箇所2: スクリプト実行。env: はもう不要です。 🚨
+          # GEMINI_API_KEYはジョブ全体に設定されたため、ここで使用可能です。
           ./venv/bin/python generate_article.py
           
-          # 生成されたHTMLファイル名を特定 (lsが失敗する可能性を考慮し、ワイルドカードを使用)
           GENERATED_FILE=$(ls *.html | head -n 1) 
           
-          # デプロイ用に 'articles' フォルダを作成し、HTMLを移動
           mkdir -p ${{ env.ARTICLE_DIR }}
           mv "$GENERATED_FILE" ${{ env.ARTICLE_DIR }}/
           
-          # index.htmlが存在しないとエラーになるため、空のindex.htmlを作成 (または既存のものをコピー)
           touch index.html
-        env:
-          # 🚨 この位置の env: でAPIキーが設定されているか確認してください 🚨
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        # env: <-- ここにあったenv:ブロックは削除してください
 
       - name: 5. デプロイ用Artifactのアップロード
         uses: actions/upload-pages-artifact@v3
         with:
-          # index.htmlとarticlesフォルダを含めてArtifactを作成
           path: .
           
       - name: 6. GitHub Pagesへのデプロイ
         id: deployment
         uses: actions/deploy-pages@v4
         with:
-          # デプロイはPagesの標準トークンで行う
           token: ${{ secrets.GITHUB_TOKEN }}
