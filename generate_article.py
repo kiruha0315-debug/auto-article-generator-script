@@ -143,8 +143,11 @@ def create_and_save_html(article_data):
 
 # --- メイン処理 ---
 
-if __name__ == "__main__":
+def main():
     if configure_api():
         article_data = generate_outline_and_body()
         if article_data:
             create_and_save_html(article_data)
+
+if __name__ == "__main__":
+    main()
