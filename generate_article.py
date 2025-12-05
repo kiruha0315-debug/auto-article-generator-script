@@ -1,35 +1,36 @@
 # ----------------------------------------------------------------------
-# 🚨 FINAL PATH FIX: GitHub Actions用 🚨
-# モジュールインポート前に強制的に仮想環境のsite-packagesをsys.pathに追加
+# 🚨 最終最終最終修正: venv内を再帰的に検索してsite-packagesを強制特定 🚨
+# GitHub Actions環境で発生するModuleNotFoundErrorを解決するためのコード
 import sys
 import os
+import glob
+import re
 
-# 実行環境のPythonのバージョンを取得 (例: 'python3.11')
-# sys.version_infoは、Actions環境で実行中のPythonのバージョンを正確に教えてくれる
-PYTHON_VERSION_DIR = f"python{sys.version_info.major}.{sys.version_info.minor}"
+# スクリプトのベースディレクトリ
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+VENV_PATH = os.path.join(BASE_DIR, 'venv')
 
-# site-packagesの正確なパスを定義
-# (auto-article-generator-script/venv/lib/python3.11/site-packages)
-VENV_SITE_PACKAGES = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 
-    'venv', 
-    'lib', 
-    PYTHON_VERSION_DIR, 
-    'site-packages'
-)
+# venvディレクトリ内の 'site-packages' フォルダをワイルドカードで検索
+site_packages_candidates = glob.glob(os.path.join(VENV_PATH, '**', 'site-packages'), recursive=True)
 
-# パスがsys.pathになければ追加
-if VENV_SITE_PACKAGES not in sys.path:
-    sys.path.append(VENV_SITE_PACKAGES)
-    # 仮想環境外で実行した場合の確認用
-    # print(f"✅ PYTHONPATHに {VENV_SITE_PACKAGES} を追加しました。") 
+found_path = None
+# 候補の中から、libまたはlib64以下にあるパスを選定
+for path in site_packages_candidates:
+    if 'venv' in path and re.search(r'(lib|lib64)/python\d\.\d/site-packages', path):
+        found_path = path
+        break
+
+# 見つかったパスをPythonの検索パス(sys.path)に追加
+if found_path and found_path not in sys.path:
+    sys.path.append(found_path)
+    # print(f"✅ 強制 PYTHONPATH に {found_path} を追加しました。")
 
 # ----------------------------------------------------------------------
 # 以下、モジュールのインポート
 import json
 import re
 from datetime import datetime
-# 💡 これでパスが通り、インポートが成功するはず 💡
+# 💡 パス設定が成功していれば、ここでインポートが成功します 💡
 import google.generativeai as genai 
 
 # --- 1. 定数と初期設定 ---
@@ -48,7 +49,6 @@ def configure_api():
     API_KEY = os.environ.get("GEMINI_API_KEY") 
     
     if not API_KEY:
-        # このメッセージがログに出たら、APIキーが Secrets に設定されていないか、環境変数名が間違っています
         print("エラー: GEMINI_API_KEYが環境変数に設定されていません。")
         return False
     
