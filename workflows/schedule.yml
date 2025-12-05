@@ -1,20 +1,19 @@
 name: Scheduled Article Generation
 
 on:
-  # 毎日午前1時 (UTC) にジョブを実行する
   schedule:
     - cron: '0 1 * * *'
-  # 手動実行を可能にするボタンを追加
   workflow_dispatch:
 
 jobs:
-  generate_and_output:
+  generate_and_deploy:  # ジョブ名を変更
     runs-on: ubuntu-latest
     
     steps:
-      - name: 1. リポジトリをチェックアウト
+      - name: 1. リポジトリをチェックアウト (生成スクリプト用)
         uses: actions/checkout@v4
 
+      # (ステップ 2, 3, 4, 5 はそのまま)
       - name: 2. Python環境のセットアップ
         uses: actions/setup-python@v5
         with:
@@ -25,14 +24,27 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: 4. スクリプトの実行と記事の生成
+        id: generate  # ステップIDを追加
         run: python generate_article.py
         env:
-          # APIキーを安全に環境変数として渡す
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
-      - name: 5. 生成された記事ファイルを出力 (デバッグ用)
-        uses: actions/upload-artifact@v4
+      # --- 🚨 新規追加するデプロイステップ 🚨 ---
+      - name: 5. 生成されたHTMLファイルの特定とデプロイ
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          # プッシュに使用するトークン
+          API_TOKEN_GITHUB: ${{ secrets.DEPLOY_TOKEN }}
         with:
-          name: generated-articles
-          path: '*.html'
-          retention-days: 1
+          source-directory: './'  # 生成されたHTMLファイルが現在のディレクトリにある
+          destination-github-username: 'kiruha0315-debug' # あなたのユーザー名
+          destination-repository-name: 'kiruha0315-debug.github.io' # 公開サイトのリポジトリ名
+          user-email: 'kiruha0315-debug@users.noreply.github.com' # あなたのGitHub登録メール
+          commit-message: 'feat: AIによる自動記事生成とデプロイ'
+          target-branch: 'main'
+          # 生成されたHTMLファイルのみを対象にするフィルター（ファイル名はワイルドカードで指定）
+          target-directory: 'articles' # 記事を置く公開リポジトリ内のフォルダ名（例: articles/）
+          create-target-branch-if-needed: true
+          # 記事ファイル名の一覧を動的に取得する（Pythonスクリプトからファイル名を標準出力するなど、より高度なロジックが必要）
+          # 現状はデバッグ用に、全ての .html ファイルを対象とします。
+          target-files: '*.html'
