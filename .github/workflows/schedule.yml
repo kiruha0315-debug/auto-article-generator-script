@@ -43,27 +43,24 @@ jobs:
           # HTMLファイル名を特定
           GENERATED_FILE=$(ls *.html 2>/dev/null | head -n 1) 
           
-          # 🚨 修正1: Artifactのルートとして使う 'temp_deploy' フォルダを作成 🚨
-          mkdir temp_deploy
-          
-          # 記事フォルダを作成し、生成物を移動
-          mkdir -p temp_deploy/articles
-          mv "$GENERATED_FILE" temp_deploy/articles/
-          
-          # index.htmlと.nojekyllをArtifactのルートにコピー
-          cp index.html temp_deploy/index.html || true
-          cp .nojekyll temp_deploy/.nojekyll || true
-          
-          if [ ! -f "temp_deploy/index.html" ]; then
-            echo "❌ index.htmlが見つかりません。スクリプトが失敗した可能性があります。"
+          if [ -z "$GENERATED_FILE" ]; then
+            echo "❌ 記事生成に失敗しました。"
             exit 1
           fi
 
-      - name: 5. デプロイ用Artifactのアップロード
-        uses: actions/upload-pages-artifact@v3
+          # 🚨 修正1: デプロイ先リポジトリにコミットするための準備 🚨
+          mkdir -p articles
+          mv "$GENERATED_FILE" articles/
+          
+          # index.htmlと.nojekyllがルートにあることを確認 (以前追加済み)
+        
+      - name: 5. GitHub Pages への直接コミットとデプロイ
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          # 🚨 修正2: Artifactとしてアップロードするパスを 'temp_deploy' フォルダに限定 🚨
-          path: temp_deploy
+          # 🚨 修正2: GITHUB_TOKEN を使って main ブランチに articles フォルダをコミット 🚨
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .  # リポジトリのルートにあるファイルをすべて公開
+          force_orphan: true # 履歴を上書きしてクリーンな状態を保つ
           
       - name: 6. GitHub Pagesへのデプロイ
         id: deployment
