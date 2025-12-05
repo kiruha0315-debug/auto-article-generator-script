@@ -1,4 +1,4 @@
-name: Scheduled Article Generation
+name: Scheduled Article Generation and Pages Deployment
 
 on:
   schedule:
@@ -6,11 +6,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  generate_and_deploy:
+  generate-and-deploy:
     runs-on: ubuntu-latest
     
+    # 環境変数を設定 (ステップ間で共有するため)
+    env:
+      ARTICLE_DIR: articles # 記事をまとめるディレクトリ名
+    
     steps:
-      - name: 1. リポジトリをチェックアウト (生成スクリプト用)
+      - name: 1. リポジトリをチェックアウト
         uses: actions/checkout@v4
 
       - name: 2. Python環境のセットアップ
@@ -18,39 +22,39 @@ jobs:
         with:
           python-version: '3.11'
 
-      # 🚨 修正ステップ: 仮想環境の作成とインストール、実行を統合 🚨
-      - name: 3. 仮想環境作成、依存関係のインストール、スクリプト実行
+      - name: 3. 仮想環境作成と依存関係のインストール
         run: |
-          # 仮想環境を作成
           python -m venv venv
-          
-          # 🚨 修正: 正しいライブラリ名 'google-generativeai' を指定
           ./venv/bin/pip install google-generativeai pydantic -U
-          
-          # スクリプトを実行
+
+      - name: 4. 記事生成と一時ディレクトリへの保存
+        run: |
+          # 記事生成スクリプトを実行し、HTMLファイルを生成
           ./venv/bin/python generate_article.py
+          
+          # 生成されたHTMLファイル名を特定 (YYYYMMDD-slug.html)
+          # 注意: generate_article.pyが生成するファイル名を正確に特定できることが重要
+          GENERATED_FILE=$(ls *.html | head -n 1) 
+          
+          # デプロイ用に 'articles' フォルダを作成し、HTMLを移動
+          mkdir -p ${{ env.ARTICLE_DIR }}
+          mv "$GENERATED_FILE" ${{ env.ARTICLE_DIR }}/
+          
+          # index.htmlが存在しないとエラーになるため、空のindex.htmlを作成 (または既存のものをコピー)
+          # リポジトリのルートにindex.htmlがないとPagesが混乱する可能性
+          touch index.html
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          
-      - name: 4. デプロイ前にarticlesフォルダをクリーンアップ
-        # 記事ファイルを生成した後の段階で、articlesフォルダの痕跡を削除
-        run: |
-          # articlesフォルダが空でない場合、中身のファイルを削除（.html以外も含む可能性）
-          # 今回はデプロイ先のリポジトリで作業するため、source-directoryにある articlesフォルダ自体を削除。
-          # 次のステップで、生成された .html ファイルのみがデプロイされるようにする。
-          rm -rf articles || true
 
-      - name: 5. 生成されたHTMLファイルの特定とデプロイ
-        uses: cpina/github-action-push-to-another-repository@main
-        env:
-          API_TOKEN_GITHUB: ${{ secrets.DEPLOY_TOKEN }}
+      - name: 5. デプロイ用Artifactのアップロード
+        uses: actions/upload-pages-artifact@v3
         with:
-          source-directory: './' 
-          destination-github-username: 'kiruha0315-debug' 
-          destination-repository-name: 'kiruha0315-debug.github.io' 
-          user-email: 'kiruha0315-debug@users.noreply.github.com'
-          commit-message: 'feat: AIによる自動記事生成とデプロイ'
-          target-branch: 'main'
-          target-directory: 'articles'
-          create-target-branch-if-needed: true
-          target-files: '*.html' # ここで生成された HTML ファイルのみをプッシュ
+          # index.htmlとarticlesフォルダを含めてArtifactを作成
+          path: .
+          
+      - name: 6. GitHub Pagesへのデプロイ
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          # デプロイはPagesの標準トークンで行う
+          token: ${{ secrets.GITHUB_TOKEN }}
