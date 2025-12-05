@@ -44,7 +44,7 @@ jobs:
         env:
           # 🚨 修正箇所: GEMINI_API_KEYをこのrunブロックに設定 🚨
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-
+          
       - name: 5. デプロイ用Artifactのアップロード
         uses: actions/upload-pages-artifact@v3
         with:
