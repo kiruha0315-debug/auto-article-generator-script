@@ -1,38 +1,8 @@
-# ----------------------------------------------------------------------
-# 🚨 最終最終最終修正: venv内を再帰的に検索してsite-packagesを強制特定 🚨
-# GitHub Actions環境で発生するModuleNotFoundErrorを解決するためのコード
-import sys
-import os
-import glob
-import re
-
-# スクリプトのベースディレクトリ
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-VENV_PATH = os.path.join(BASE_DIR, 'venv')
-
-# venvディレクトリ内の 'site-packages' フォルダをワイルドカードで検索
-site_packages_candidates = glob.glob(os.path.join(VENV_PATH, '**', 'site-packages'), recursive=True)
-
-found_path = None
-# 候補の中から、libまたはlib64以下にあるパスを選定
-for path in site_packages_candidates:
-    if 'venv' in path and re.search(r'(lib|lib64)/python\d\.\d/site-packages', path):
-        found_path = path
-        break
-
-# 見つかったパスをPythonの検索パス(sys.path)に追加
-if found_path and found_path not in sys.path:
-    sys.path.append(found_path)
-    # print(f"✅ 強制 PYTHONPATH に {found_path} を追加しました。")
-
-# ----------------------------------------------------------------------
-# 以下、モジュールのインポート
 import json
 import re
+import os
 from datetime import datetime
-# 💡 パス設定が成功していれば、ここでインポートが成功します 💡
-import google.generativeai as genai 
-
+import google.generativeai as genai
 # --- 1. 定数と初期設定 ---
 
 # 🚨 ここは公開サイトのURLに合わせてください 🚨
