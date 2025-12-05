@@ -9,10 +9,16 @@ jobs:
   generate-and-deploy:
     runs-on: ubuntu-latest
     
-    # 🚨 修正箇所1: ジョブレベルのenv: から GEMINI_API_KEY を削除 🚨
+    # 🚨 修正箇所1: 必要な権限の追加 🚨
+    permissions:
+      contents: read     # リポジトリをチェックアウトするために必要
+      pages: write       # GitHub Pagesへのデプロイのために必要
+      id-token: write    # OIDCトークン(認証情報)の発行のために必要
+      
     env:
       ARTICLE_DIR: articles
-      # GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} <-- これを削除
+    
+
     
     steps:
       - name: 1. リポジトリをチェックアウト
