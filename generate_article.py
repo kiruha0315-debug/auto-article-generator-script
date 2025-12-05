@@ -1,7 +1,31 @@
+# ----------------------------------------------------------------------
+# 🚨 最終修正: PYTHONPATHの自動設定（インポート前に実行） 🚨
+# GitHub Actions環境でのModuleNotFoundErrorを回避するための絶対パス追加
+import sys
 import os
+import glob
+
+# 仮想環境内の site-packages ディレクトリのパスを自動で探す
+# Linux環境 (venv/lib/pythonX.Y/site-packages) を想定
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+venv_path = os.path.join(BASE_DIR, 'venv')
+
+# Pythonのバージョンディレクトリを見つける (例: lib/python3.11)
+lib_dir = glob.glob(os.path.join(venv_path, 'lib', 'python*'))
+
+if lib_dir:
+    site_packages_path = os.path.join(lib_dir[0], 'site-packages')
+    if site_packages_path not in sys.path:
+        sys.path.append(site_packages_path)
+        print(f"✅ PYTHONPATHに {site_packages_path} を追加しました。")
+else:
+    print("❌ 仮想環境のlibディレクトリが見つかりませんでした。")
+# ----------------------------------------------------------------------
+
 import json
 import re
 from datetime import datetime
+# これでインポートが成功するはず
 import google.generativeai as genai
 
 # --- 1. 定数と初期設定 ---
