@@ -1,0 +1,38 @@
+name: Scheduled Article Generation
+
+on:
+  # 毎日午前1時 (UTC) にジョブを実行する
+  schedule:
+    - cron: '0 1 * * *'
+  # 手動実行を可能にするボタンを追加
+  workflow_dispatch:
+
+jobs:
+  generate_and_output:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 1. リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: 2. Python環境のセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 3. 依存関係のインストール
+        run: pip install -r requirements.txt
+
+      - name: 4. スクリプトの実行と記事の生成
+        run: python generate_article.py
+        env:
+          # APIキーを安全に環境変数として渡す
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: 5. 生成された記事ファイルを出力 (デバッグ用)
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-articles
+          path: '*.html'
+          retention-days: 1
