@@ -1,0 +1,44 @@
+name: Scheduled Article Generation
+
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+jobs:
+  generate_and_deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 1. リポジトリをチェックアウト (生成スクリプト用)
+        uses: actions/checkout@v4
+
+      - name: 2. Python環境のセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 3. 依存関係のインストール
+        run: pip install -r requirements.txt
+
+      - name: 4. スクリプトの実行と記事の生成
+        id: generate
+        run: python generate_article.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: 5. 生成されたHTMLファイルの特定とデプロイ
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.DEPLOY_TOKEN }}
+        with:
+          source-directory: './' 
+          destination-github-username: 'kiruha0315-debug' 
+          destination-repository-name: 'kiruha0315-debug.github.io' 
+          user-email: 'kiruha0315-debug@users.noreply.github.com'
+          commit-message: 'feat: AIによる自動記事生成とデプロイ'
+          target-branch: 'main'
+          target-directory: 'articles'
+          create-target-branch-if-needed: true
+          target-files: '*.html'
