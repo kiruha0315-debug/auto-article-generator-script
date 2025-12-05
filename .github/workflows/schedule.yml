@@ -21,15 +21,14 @@ jobs:
       # 🚨 修正ステップ: 仮想環境の作成とインストール、実行を統合 🚨
       - name: 3. 仮想環境作成、依存関係のインストール、スクリプト実行
         run: |
-          # 仮想環境を作成し、有効化
+          # 仮想環境を作成
           python -m venv venv
-          source venv/bin/activate
           
-          # 依存関係をインストール
-          pip install google-genai pydantic -U
+          # 仮想環境内のpipを使って依存関係をインストール
+          ./venv/bin/pip install google-genai pydantic -U
           
-          # スクリプトを実行
-          python generate_article.py
+          # 仮想環境内のpythonを使ってスクリプトを実行
+          ./venv/bin/python generate_article.py
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
