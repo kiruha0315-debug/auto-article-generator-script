@@ -32,7 +32,7 @@ jobs:
           # 記事生成スクリプトを実行し、HTMLファイルを生成
           ./venv/bin/python generate_article.py
           
-          # 生成されたHTMLファイル名を特定 (YYYYMMDD-slug.html)
+          # 生成されたHTMLファイル名を特定 (lsが失敗する可能性を考慮し、ワイルドカードを使用)
           GENERATED_FILE=$(ls *.html | head -n 1) 
           
           # デプロイ用に 'articles' フォルダを作成し、HTMLを移動
@@ -42,9 +42,9 @@ jobs:
           # index.htmlが存在しないとエラーになるため、空のindex.htmlを作成 (または既存のものをコピー)
           touch index.html
         env:
-          # 🚨 修正箇所: GEMINI_API_KEYをこのrunブロックに設定 🚨
+          # 🚨 この位置の env: でAPIキーが設定されているか確認してください 🚨
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          
+
       - name: 5. デプロイ用Artifactのアップロード
         uses: actions/upload-pages-artifact@v3
         with:
