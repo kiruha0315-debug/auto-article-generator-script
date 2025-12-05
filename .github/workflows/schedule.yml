@@ -9,10 +9,10 @@ jobs:
   generate-and-deploy:
     runs-on: ubuntu-latest
     
-    # 🚨 修正箇所1: ジョブ全体に適用する環境変数をここで設定 🚨
+    # 🚨 修正箇所1: ジョブレベルのenv: から GEMINI_API_KEY を削除 🚨
     env:
       ARTICLE_DIR: articles
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # これで全ステップに適用
+      # GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} <-- これを削除
     
     steps:
       - name: 1. リポジトリをチェックアウト
@@ -30,17 +30,24 @@ jobs:
 
       - name: 4. 記事生成と一時ディレクトリへの保存
         run: |
-          # 🚨 修正箇所2: スクリプト実行。env: はもう不要です。 🚨
-          # GEMINI_API_KEYはジョブ全体に設定されたため、ここで使用可能です。
+          # 🚨 修正箇所2: シェル内で直接環境変数を設定してスクリプトを実行 🚨
+          # export コマンドで環境変数を設定し、同じシェルセッション内で Python スクリプトを実行
+          export GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
           ./venv/bin/python generate_article.py
           
-          GENERATED_FILE=$(ls *.html | head -n 1) 
+          # HTMLファイルがないと次のlsがエラーになるため、エラー処理を追加
+          GENERATED_FILE=$(ls *.html 2>/dev/null | head -n 1) 
           
+          if [ -z "$GENERATED_FILE" ]; then
+            echo "❌ 記事生成に失敗しました（HTMLファイルが見つかりません）。"
+            exit 1
+          fi
+
           mkdir -p ${{ env.ARTICLE_DIR }}
           mv "$GENERATED_FILE" ${{ env.ARTICLE_DIR }}/
           
           touch index.html
-        # env: <-- ここにあったenv:ブロックは削除してください
+        # env: <-- ここも空でOK
 
       - name: 5. デプロイ用Artifactのアップロード
         uses: actions/upload-pages-artifact@v3
