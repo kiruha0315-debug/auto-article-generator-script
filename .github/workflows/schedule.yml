@@ -11,9 +11,9 @@ jobs:
     
     # 🚨 修正箇所1: 必要な権限の追加 🚨
     permissions:
-      contents: read     # リポジトリをチェックアウトするために必要
-      pages: write       # GitHub Pagesへのデプロイのために必要
-      id-token: write    # OIDCトークン(認証情報)の発行のために必要
+      contents: write     # ファイルのコミットとプッシュのために必要
+      pages: write       
+      id-token: write    
       
     env:
       ARTICLE_DIR: articles
