@@ -36,29 +36,34 @@ jobs:
 
       - name: 4. 記事生成と一時ディレクトリへの保存
         run: |
-          # 🚨 修正箇所2: シェル内で直接環境変数を設定してスクリプトを実行 🚨
-          # export コマンドで環境変数を設定し、同じシェルセッション内で Python スクリプトを実行
-          export GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          # 記事生成スクリプトを実行
+          export GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}"
           ./venv/bin/python generate_article.py
           
-          # HTMLファイルがないと次のlsがエラーになるため、エラー処理を追加
+          # HTMLファイル名を特定
           GENERATED_FILE=$(ls *.html 2>/dev/null | head -n 1) 
           
-          if [ -z "$GENERATED_FILE" ]; then
-            echo "❌ 記事生成に失敗しました（HTMLファイルが見つかりません）。"
+          # 🚨 修正1: Artifactのルートとして使う 'temp_deploy' フォルダを作成 🚨
+          mkdir temp_deploy
+          
+          # 記事フォルダを作成し、生成物を移動
+          mkdir -p temp_deploy/articles
+          mv "$GENERATED_FILE" temp_deploy/articles/
+          
+          # index.htmlと.nojekyllをArtifactのルートにコピー
+          cp index.html temp_deploy/index.html || true
+          cp .nojekyll temp_deploy/.nojekyll || true
+          
+          if [ ! -f "temp_deploy/index.html" ]; then
+            echo "❌ index.htmlが見つかりません。スクリプトが失敗した可能性があります。"
             exit 1
           fi
-
-          mkdir -p ${{ env.ARTICLE_DIR }}
-          mv "$GENERATED_FILE" ${{ env.ARTICLE_DIR }}/
-          
-          touch index.html
-        # env: <-- ここも空でOK
 
       - name: 5. デプロイ用Artifactのアップロード
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          # 🚨 修正2: Artifactとしてアップロードするパスを 'temp_deploy' フォルダに限定 🚨
+          path: temp_deploy
           
       - name: 6. GitHub Pagesへのデプロイ
         id: deployment
