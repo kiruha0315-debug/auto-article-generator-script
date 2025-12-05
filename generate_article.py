@@ -17,8 +17,6 @@ SEARCH_INTENT = "具体的なトレンドと、企業が今すぐ取り組むべ
 
 def configure_api():
     """Gemini APIキーを設定する"""
-    # 環境変数からAPIキーを取得します。
-    # これはGitHub Actionsで設定します。
     API_KEY = os.environ.get("GEMINI_API_KEY") 
     
     if not API_KEY:
@@ -55,7 +53,6 @@ def generate_outline_and_body():
     """骨子と本文を一括で生成する"""
     print(f"🤖 キーワード: {TARGET_KEYWORD} の記事生成を開始します...")
     
-    # 記事全体をJSON形式で生成させるプロンプト (効率化のため一括生成)
     full_prompt = f"""
     あなたはプロのSEOライターです。以下のキーワードと検索意図に基づき、SEOで上位表示を目指す記事全体をJSON形式で生成してください。
     【キーワード】: {TARGET_KEYWORD}
@@ -92,17 +89,24 @@ def create_and_save_html(article_data):
     meta_description = article_data["meta_description"]
     
     # Markdownを簡単なHTMLに変換 (簡易的な置換)
-    body_html = body_markdown.replace('## ', '<h2>').replace('\n', '</p><p>').replace('<h2>', '</h2><h2>').strip('<p>')
+    # 複数行のテキストを <p>でラップする
+    body_html = body_markdown.replace('## ', '<h2>').replace('### ', '<h3>')
+    body_html = body_html.replace('\n\n', '</p><p>')
+    body_html = re.sub(r'<h2>(.*?)', r'</p><h2>\1', body_html)
+    body_html = re.sub(r'<h3>(.*?)', r'</p><h3>\1', body_html)
+    body_html = f"<p>{body_html}</p>"
 
     # ファイル名と公開URLのパスを生成
-    # 例: 20251205-ai-trend.html
     today_str = datetime.now().strftime("%Y%m%d")
     url_slug = re.sub(r'[^a-z0-9]+', '-', TARGET_KEYWORD.lower()).strip('-')[:30]
     filename = f"{today_str}-{url_slug}.html"
     
-    # AdSenseコードはダミーを使用 (GitHub Actionsで本番コードに置換可能)
-    ADSENSE_CODE = f'<script async src="{BASE_URL}ad-code.js" crossorigin="anonymous"></script>'
+    # AdSenseコードはダミーを使用 (本番コードはSecretsなどから読み込むのが理想)
+    ADSENSE_CODE = '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2130894810041111" crossorigin="anonymous"></script>'
     
+    # AdSense所有権確認タグ (デプロイ時に必要なくなるが、残していても良い)
+    GSC_VERIFICATION = '<meta name="google-site-verification" content="gQHkk6TWzD6wsQHRbbQt5o8yszlMxyKs3LgeqAzOyg4" />'
+
     html_template = f"""
 <!DOCTYPE html>
 <html lang="ja">
@@ -111,10 +115,12 @@ def create_and_save_html(article_data):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
     <meta name="description" content="{meta_description}">
+    {GSC_VERIFICATION}
     {ADSENSE_CODE}
     <style>
         body {{ font-family: 'Yu Gothic', 'Meiryo', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; }}
         h1, h2, h3 {{ color: #333; }}
+        p {{ margin-bottom: 1em; }}
     </style>
 </head>
 <body>
