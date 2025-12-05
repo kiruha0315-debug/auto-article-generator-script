@@ -32,7 +32,15 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           
-      - name: 4. 生成されたHTMLファイルの特定とデプロイ
+      - name: 4. デプロイ前にarticlesフォルダをクリーンアップ
+        # 記事ファイルを生成した後の段階で、articlesフォルダの痕跡を削除
+        run: |
+          # articlesフォルダが空でない場合、中身のファイルを削除（.html以外も含む可能性）
+          # 今回はデプロイ先のリポジトリで作業するため、source-directoryにある articlesフォルダ自体を削除。
+          # 次のステップで、生成された .html ファイルのみがデプロイされるようにする。
+          rm -rf articles || true
+
+      - name: 5. 生成されたHTMLファイルの特定とデプロイ
         uses: cpina/github-action-push-to-another-repository@main
         env:
           API_TOKEN_GITHUB: ${{ secrets.DEPLOY_TOKEN }}
@@ -45,4 +53,4 @@ jobs:
           target-branch: 'main'
           target-directory: 'articles'
           create-target-branch-if-needed: true
-          target-files: '*.html'
+          target-files: '*.html' # ここで生成された HTML ファイルのみをプッシュ
